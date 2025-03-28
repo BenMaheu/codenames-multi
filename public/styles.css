@@ -57,7 +57,7 @@ h1 {
     color: #495057;
 }
 
-.form-group input {
+.form-group input, .form-group select {
     padding: 10px;
     border: 1px solid #ced4da;
     border-radius: 5px;
@@ -147,12 +147,69 @@ h1 {
     background-color: #5a6268;
 }
 
+/* Styles pour la section d'indice */
+.clue-section {
+    margin-bottom: 20px;
+}
+
+.clue-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    border: 1px solid #dee2e6;
+}
+
+.clue-form .form-group {
+    flex: 1;
+    min-width: 150px;
+}
+
+.submit-btn {
+    padding: 10px 15px;
+    background-color: #9c27b0;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.submit-btn:hover {
+    background-color: #7b1fa2;
+}
+
+.clue-display-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    border: 1px solid #dee2e6;
+}
+
+.current-clue-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 16px;
+    font-weight: bold;
+}
+
 /* Styles pour les contrôles du jeu */
 .game-controls {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.game-buttons {
+    display: flex;
     flex-wrap: wrap;
     gap: 10px;
 }
@@ -176,8 +233,18 @@ button {
     color: white;
 }
 
+.secondary-btn {
+    background-color: #ff9800;
+    color: white;
+}
+
 button:hover {
     opacity: 0.9;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
 }
 
 .team-scores {
@@ -410,6 +477,10 @@ button:hover {
     .card {
         font-size: 14px;
         padding: 5px;
+    }
+    
+    .clue-form {
+        flex-direction: column;
     }
 }
 

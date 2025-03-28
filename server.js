@@ -20,6 +20,8 @@ let gameState = {
   redCardsLeft: 0,
   blueCardsLeft: 0,
   gameOver: false,
+  currentClue: null,
+  attemptsLeft: 0,
   players: {
     red: {
       spymaster: null,
@@ -55,7 +57,17 @@ const words = [
   "SEL", "SUCRE", "CAFÉ", "THÉ", "EAU",
   "LAIT", "JUS", "VIN", "BIÈRE", "PAIN",
   "FROMAGE", "BEURRE", "ŒUFS", "VIANDE", "POISSON",
-  "LÉGUME", "FRUIT", "DESSERT", "GÂTEAU", "CRÈME"
+  "LÉGUME", "FRUIT", "DESSERT", "GÂTEAU", "CRÈME",
+  "BANQUE", "ARGENT", "DETTE", "IMPÔT", "SALAIRE",
+  "COMMERCE", "MARCHÉ", "CONTRAT", "ENTREPRISE", "ACHAT",
+  "CHEF", "EMPLOYÉ", "BUREAU", "PROJET", "RÉUNION",
+  "LETTRE", "MESSAGE", "SIGNAL", "CODE", "SYMBOLE",
+  "POLICE", "CRIME", "LOI", "AVOCAT", "JUGE",
+  "GUERRE", "PAIX", "ARMÉE", "SOLDAT", "BATAILLE",
+  "SCIENCE", "RECHERCHE", "DÉCOUVERTE", "THÉORIE", "EXPÉRIENCE",
+  "MÉDECIN", "MALADIE", "SANTÉ", "HÔPITAL", "REMÈDE",
+  "INTERNET", "RÉSEAU", "SITE", "DONNÉE", "LOGICIEL",
+  "CIEL", "NUAGE", "BROUILLARD", "TEMPÊTE", "ÉCLAIR"
 ];
 
 // Initialiser une nouvelle partie
@@ -66,12 +78,14 @@ function initGame() {
   gameState.redCardsLeft = 8 + (gameState.currentTeam === 'red' ? 1 : 0);
   gameState.blueCardsLeft = 8 + (gameState.currentTeam === 'blue' ? 1 : 0);
   gameState.gameOver = false;
+  gameState.currentClue = null;
+  gameState.attemptsLeft = 0;
   
   // Conserver les joueurs
   
   // Créer les cartes du jeu
   createCards();
-
+  
   console.log(`Nouvelle partie initialisée avec ${gameState.cards.length} cartes.`);
   console.log(`L'équipe ${gameState.currentTeam} commence avec ${gameState.currentTeam === 'red' ? gameState.redCardsLeft : gameState.blueCardsLeft} cartes.`);
 }
@@ -85,7 +99,6 @@ function createCards() {
   const teamDistribution = [];
   const firstTeamCount = gameState.currentTeam === 'red' ? 9 : 8;
   const secondTeamCount = gameState.currentTeam === 'blue' ? 9 : 8;
-
   
   // Équipe qui commence (9 cartes)
   for (let i = 0; i < firstTeamCount; i++) {
@@ -108,7 +121,6 @@ function createCards() {
   
   // Mélanger la distribution
   const shuffledDistribution = shuffleArray(teamDistribution);
-
   
   // Créer les 25 cartes avec mots et équipes
   gameState.cards = [];
@@ -119,14 +131,15 @@ function createCards() {
       revealed: false
     });
   }
+  
   // Vérifier la distribution
-  console.log(`${gameState.cards.length} cartes créées`);
   const distribution = {
     red: 0,
     blue: 0,
     black: 0,
     neutral: 0
   };
+  
   gameState.cards.forEach(card => {
     distribution[card.team]++;
   });
@@ -160,12 +173,13 @@ io.on('connection', (socket) => {
   // Rejoindre une équipe
   socket.on('joinTeam', ({ team, role, nickname }) => {
     console.log(`Joueur ${socket.id} (${nickname}) rejoint l'équipe ${team} en tant que ${role}`);
-
+    
     const prevTeam = findPlayerTeam(socket.id);
     
     // Retirer le joueur de son équipe précédente si nécessaire
     if (prevTeam) {
       removePlayerFromTeam(socket.id, prevTeam);
+      console.log(`Joueur ${socket.id} retiré de l'équipe ${prevTeam}`);
     }
     
     // Ajouter le joueur à la nouvelle équipe
@@ -181,6 +195,7 @@ io.on('connection', (socket) => {
             team: team,
             role: 'agent'
           });
+          console.log(`Ancien maître-espion ${currentSpymaster.id} devient agent`);
         }
         
         gameState.players[team].spymaster = {
@@ -202,14 +217,70 @@ io.on('connection', (socket) => {
     }
     
     console.log('État des joueurs après ajout:', JSON.stringify(gameState.players, null, 2));
-
+    
     // Informer tous les joueurs de la mise à jour
     io.emit('playersUpdate', gameState.players);
     
-    // Informer le joueur de son équipe et rôle    
+    // Informer le joueur de son équipe et rôle
     socket.emit('teamJoined', {
       team: team,
       role: role
+    });
+  });
+  
+  // Soumettre un indice (réservé aux maîtres-espions)
+  socket.on('submitClue', ({ word, number }) => {
+    // Vérifier que l'expéditeur est bien le maître-espion de l'équipe actuelle
+    const playerInfo = getPlayerInfo(socket.id);
+    
+    if (!playerInfo) {
+      console.log('Indice rejeté: joueur non trouvé');
+      return;
+    }
+    
+    if (playerInfo.role !== 'spymaster') {
+      console.log('Indice rejeté: le joueur n\'est pas un maître-espion');
+      return;
+    }
+    
+    if (playerInfo.team !== gameState.currentTeam) {
+      console.log('Indice rejeté: ce n\'est pas le tour de cette équipe');
+      return;
+    }
+    
+    if (gameState.gameOver) {
+      console.log('Indice rejeté: la partie est terminée');
+      return;
+    }
+    
+    // Validations supplémentaires
+    if (!word || word.trim() === '') {
+      console.log('Indice rejeté: mot vide');
+      return;
+    }
+    
+    // Vérifier que le nombre est valide (entre 0 et 9)
+    const parsedNumber = parseInt(number);
+    if (isNaN(parsedNumber) || parsedNumber < 0 || parsedNumber > 9) {
+      console.log('Indice rejeté: nombre invalide');
+      return;
+    }
+    
+    // Enregistrer l'indice
+    gameState.currentClue = {
+      word: word.toUpperCase(),
+      number: parsedNumber
+    };
+    
+    // Définir le nombre de tentatives
+    gameState.attemptsLeft = parsedNumber + 1;  // +1 pour la règle officielle
+    
+    console.log(`Indice accepté: ${word} (${number})`);
+    
+    // Informer tous les joueurs
+    io.emit('clueSubmitted', {
+      clue: gameState.currentClue,
+      team: gameState.currentTeam
     });
   });
   
@@ -220,6 +291,18 @@ io.on('connection', (socket) => {
     // Vérifier si le jeu est terminé
     if (gameState.gameOver) {
       console.log('Clic ignoré: la partie est terminée');
+      return;
+    }
+    
+    // Vérifier si un indice a été donné
+    if (!gameState.currentClue) {
+      console.log('Clic ignoré: aucun indice n\'a été donné');
+      return;
+    }
+    
+    // Vérifier si des tentatives restent
+    if (gameState.attemptsLeft <= 0) {
+      console.log('Clic ignoré: plus de tentatives disponibles');
       return;
     }
     
@@ -258,6 +341,9 @@ io.on('connection', (socket) => {
     
     console.log(`Carte ${cardIndex} révélée: équipe ${card.team}, mot "${card.word}"`);
     
+    // Réduire le nombre de tentatives
+    gameState.attemptsLeft--;
+    
     // Mettre à jour le compteur de cartes restantes
     if (card.team === 'red') {
       gameState.redCardsLeft--;
@@ -270,16 +356,18 @@ io.on('connection', (socket) => {
     // Vérifier les conditions de victoire ou défaite
     checkGameEnd(card.team);
     
-    // Si la carte n'appartient pas à l'équipe actuelle, changer de tour
-    if (card.team !== gameState.currentTeam && card.team !== 'black' && !gameState.gameOver) {
-      changeTurn();
+    // Si la carte n'appartient pas à l'équipe actuelle, fin du tour
+    if (card.team !== gameState.currentTeam || gameState.attemptsLeft <= 0) {
+      if (card.team !== 'black' && !gameState.gameOver) {
+        changeTurn();
+      }
     }
     
     // Envoyer la mise à jour à tous les clients
     io.emit('gameStateUpdate', gameState);
   });
   
-  // Fin de tour
+  // Fin de tour (passer volontairement)
   socket.on('endTurn', () => {
     // Vérifier si le jeu est terminé
     if (gameState.gameOver) return;
@@ -300,6 +388,86 @@ io.on('connection', (socket) => {
   // Nouvelle partie
   socket.on('newGame', () => {
     initGame();
+    io.emit('gameStateUpdate', gameState);
+  });
+  
+  // Demande de nouvelle grille de mots
+  socket.on('newWordsGrid', () => {
+    // Sauvegarder la distribution actuelle des équipes
+    const teamDistribution = gameState.cards.map(card => ({
+      team: card.team,
+      revealed: card.revealed
+    }));
+    
+    // Mélanger les mots et prendre les 25 premiers
+    const shuffledWords = shuffleArray([...words]).slice(0, 25);
+    
+    // Recréer les cartes avec les nouveaux mots mais la même distribution d'équipes
+    for (let i = 0; i < 25; i++) {
+      gameState.cards[i].word = shuffledWords[i];
+      // Conserver l'équipe et l'état revealed
+    }
+    
+    console.log('Nouvelle grille de mots générée');
+    
+    // Informer tous les clients
+    io.emit('gameStateUpdate', gameState);
+  });
+  
+  // Demande de nouvelle grille de positions
+  socket.on('newPositionsGrid', () => {
+    // Sauvegarder les mots actuels
+    const currentWords = gameState.cards.map(card => card.word);
+    
+    // Réinitialiser l'état du jeu avec une nouvelle répartition d'équipes
+    gameState.currentTeam = Math.random() < 0.5 ? 'red' : 'blue';
+    gameState.redCardsLeft = 8 + (gameState.currentTeam === 'red' ? 1 : 0);
+    gameState.blueCardsLeft = 8 + (gameState.currentTeam === 'blue' ? 1 : 0);
+    gameState.gameOver = false;
+    gameState.currentClue = null;
+    gameState.attemptsLeft = 0;
+    
+    // Créer la distribution des équipes
+    const teamDistribution = [];
+    const firstTeamCount = gameState.currentTeam === 'red' ? 9 : 8;
+    const secondTeamCount = gameState.currentTeam === 'blue' ? 9 : 8;
+    
+    // Équipe qui commence (9 cartes)
+    for (let i = 0; i < firstTeamCount; i++) {
+      teamDistribution.push(gameState.currentTeam);
+    }
+    
+    // Autre équipe (8 cartes)
+    const otherTeam = gameState.currentTeam === 'red' ? 'blue' : 'red';
+    for (let i = 0; i < secondTeamCount; i++) {
+      teamDistribution.push(otherTeam);
+    }
+    
+    // Carte noire (1 carte)
+    teamDistribution.push('black');
+    
+    // Cartes neutres (7 cartes)
+    for (let i = 0; i < 7; i++) {
+      teamDistribution.push('neutral');
+    }
+    
+    // Mélanger la distribution
+    const shuffledDistribution = shuffleArray(teamDistribution);
+    
+    // Recréer les cartes avec les mêmes mots mais une nouvelle distribution d'équipes
+    gameState.cards = [];
+    for (let i = 0; i < 25; i++) {
+      gameState.cards.push({
+        word: currentWords[i],
+        team: shuffledDistribution[i],
+        revealed: false
+      });
+    }
+    
+    console.log('Nouvelle grille de positions générée');
+    console.log(`L'équipe ${gameState.currentTeam} commence avec ${gameState.currentTeam === 'red' ? gameState.redCardsLeft : gameState.blueCardsLeft} cartes.`);
+    
+    // Informer tous les clients
     io.emit('gameStateUpdate', gameState);
   });
   
@@ -419,6 +587,9 @@ function removePlayerFromTeam(socketId, team) {
 // Changer de tour
 function changeTurn() {
   gameState.currentTeam = gameState.currentTeam === 'red' ? 'blue' : 'red';
+  gameState.currentClue = null;
+  gameState.attemptsLeft = 0;
+  console.log(`Tour changé: c'est maintenant à l'équipe ${gameState.currentTeam}`);
 }
 
 // Vérifier si la partie est terminée
@@ -445,6 +616,7 @@ function endGame(winningTeam, byBlackCard = false) {
   gameState.gameOver = true;
   gameState.winningTeam = winningTeam;
   gameState.winByBlackCard = byBlackCard;
+  console.log(`Fin de partie: l'équipe ${winningTeam} gagne${byBlackCard ? ' (carte noire)' : ''}`);
 }
 
 // Démarrer le serveur

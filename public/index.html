@@ -46,9 +46,51 @@
             </div>
         </div>
         
+        <!-- Section d'indice (pour les maîtres-espions) -->
+        <div id="clueSection" class="clue-section">
+            <form id="clueForm" class="clue-form" style="display: none;">
+                <div class="form-group">
+                    <label for="clueWord">Indice :</label>
+                    <input type="text" id="clueWord" placeholder="Mot indice" required>
+                </div>
+                <div class="form-group">
+                    <label for="clueNumber">Nombre :</label>
+                    <select id="clueNumber" required>
+                        <option value="">--</option>
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="∞">∞</option>
+                    </select>
+                </div>
+                <button type="submit" id="submitClueBtn" class="submit-btn">Soumettre l'indice</button>
+            </form>
+        </div>
+        
+        <!-- Affichage de l'indice actuel -->
+        <div id="clueDisplaySection" class="clue-display-section" style="display: none;">
+            <div class="current-clue-info">
+                <p>Indice actuel: <span id="currentClue">Aucun</span></p>
+                <p>Tentatives restantes: <span id="attemptsLeft">0</span></p>
+            </div>
+        </div>
+        
         <!-- Contrôles du jeu -->
         <div class="game-controls">
-            <button id="newGameBtn">Nouvelle Partie</button>
+            <div class="game-buttons">
+                <button id="newGameBtn">Nouvelle Partie</button>
+                <button id="endTurnBtn">Fin du Tour</button>
+                <button id="newWordsBtn" class="secondary-btn">Nouveaux Mots</button>
+                <button id="newPositionsBtn" class="secondary-btn">Nouvelles Positions</button>
+            </div>
+            
             <div class="team-scores">
                 <div class="team red">
                     <h2>Équipe Rouge</h2>
@@ -64,7 +106,6 @@
             <div class="turn-indicator">
                 <p>Tour: <span id="currentTeam">Rouge</span></p>
             </div>
-            <button id="endTurnBtn">Fin du Tour</button>
         </div>
         
         <!-- Plateau de jeu -->
@@ -84,10 +125,12 @@
             <p>Code Names est un jeu d'association de mots entre deux équipes.</p>
             <ul>
                 <li>Deux équipes (Rouge et Bleue) s'affrontent.</li>
-                <li>Un "Maître-Espion" de chaque équipe donne des indices à ses coéquipiers.</li>
-                <li>Les coéquipiers doivent deviner quelles cartes appartiennent à leur équipe.</li>
+                <li>Un "Maître-Espion" de chaque équipe donne un indice composé d'un mot et d'un nombre.</li>
+                <li>Le nombre indique combien de cartes sont associées à l'indice.</li>
+                <li>Les agents peuvent deviner autant de cartes que le nombre indiqué, plus une carte supplémentaire (optionnel).</li>
+                <li>Si les agents révèlent une carte de l'équipe adverse ou une carte neutre, leur tour se termine immédiatement.</li>
+                <li>Si les agents révèlent la carte noire, leur équipe perd instantanément.</li>
                 <li>L'équipe qui découvre toutes ses cartes en premier gagne.</li>
-                <li>Attention à la carte noire qui fait perdre instantanément!</li>
             </ul>
         </div>
     </div>

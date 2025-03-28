@@ -30,6 +30,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const redTeamPlayers = document.getElementById('redTeamPlayers');
     const blueTeamPlayers = document.getElementById('blueTeamPlayers');
     const spectatorsList = document.getElementById('spectatorsList');
+    const clueSection = document.getElementById('clueSection');
+    const clueForm = document.getElementById('clueForm');
+    const clueWord = document.getElementById('clueWord');
+    const clueNumber = document.getElementById('clueNumber');
+    const submitClueBtn = document.getElementById('submitClueBtn');
+    const currentClueDisplay = document.getElementById('currentClue');
+    const attemptsDisplay = document.getElementById('attemptsLeft');
+    
+    const newWordsBtn = document.getElementById('newWordsBtn');
+    const newPositionsBtn = document.getElementById('newPositionsBtn');
     
     const nicknameInput = document.getElementById('nickname');
     
@@ -75,6 +85,38 @@ document.addEventListener('DOMContentLoaded', function() {
         playerInfo.role = null;
     });
     
+    // Gestionnaire d'événement pour le formulaire d'indice
+    clueForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        
+        const word = clueWord.value.trim();
+        const number = clueNumber.value;
+        
+        if (word && number) {
+            socket.emit('submitClue', {
+                word: word,
+                number: parseInt(number)
+            });
+            
+            // Réinitialiser le formulaire
+            clueWord.value = '';
+            clueNumber.value = '';
+        }
+    });
+    
+    // Gestionnaires pour générer de nouvelles grilles
+    newWordsBtn.addEventListener('click', () => {
+        if (confirm('Voulez-vous générer une nouvelle grille de mots tout en conservant les positions actuelles?')) {
+            socket.emit('newWordsGrid');
+        }
+    });
+    
+    newPositionsBtn.addEventListener('click', () => {
+        if (confirm('Voulez-vous générer une nouvelle grille de positions? Cela réinitialisera également la partie.')) {
+            socket.emit('newPositionsGrid');
+        }
+    });
+    
     // Événements Socket.io
     socket.on('connect', () => {
         console.log('Connecté au serveur');
@@ -87,6 +129,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateGameBoard();
         updateCounters();
         updateCurrentTeam();
+        updateClueDisplay();
     });
     
     socket.on('gameStateUpdate', (state) => {
@@ -95,6 +138,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateGameBoard();
         updateCounters();
         updateCurrentTeam();
+        updateClueDisplay();
         
         if (gameState.gameOver) {
             showGameOverModal();
@@ -116,6 +160,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Si le joueur est un maître-espion, activer la vue d'espion
         if (role === 'spymaster') {
             document.body.classList.add('spymaster-view');
+            // Afficher le formulaire d'indice pour les maîtres-espions
+            updateClueControls();
         } else {
             document.body.classList.remove('spymaster-view');
         }
@@ -135,6 +181,22 @@ document.addEventListener('DOMContentLoaded', function() {
             document.body.classList.add('spymaster-view');
         } else {
             document.body.classList.remove('spymaster-view');
+        }
+        
+        // Mettre à jour l'interface des indices selon le rôle
+        updateClueControls();
+    });
+    
+    socket.on('clueSubmitted', ({ clue, team }) => {
+        console.log(`Indice reçu: ${clue.word} (${clue.number}) pour l'équipe ${team}`);
+        // Mettre à jour l'interface pour afficher l'indice
+        currentClueDisplay.textContent = `${clue.word} (${clue.number})`;
+        
+        // Mettre à jour les tentatives restantes
+        if (gameState) {
+            gameState.currentClue = clue;
+            gameState.attemptsLeft = clue.number + 1;  // +1 pour la règle officielle
+            updateClueDisplay();
         }
     });
     
@@ -196,6 +258,32 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             endTurnBtn.disabled = true;
             endTurnBtn.style.opacity = 0.5;
+        }
+        
+        // Mettre à jour l'interface des indices selon l'équipe active
+        updateClueControls();
+    }
+    
+    function updateClueDisplay() {
+        if (!gameState) return;
+        
+        if (gameState.currentClue) {
+            currentClueDisplay.textContent = `${gameState.currentClue.word} (${gameState.currentClue.number})`;
+            attemptsDisplay.textContent = gameState.attemptsLeft;
+            document.getElementById('clueDisplaySection').style.display = 'block';
+        } else {
+            currentClueDisplay.textContent = "Aucun";
+            attemptsDisplay.textContent = "0";
+            document.getElementById('clueDisplaySection').style.display = 'none';
+        }
+    }
+    
+    function updateClueControls() {
+        // Si le joueur est le maître-espion de l'équipe active, afficher le formulaire d'indices
+        if (playerInfo.role === 'spymaster' && playerInfo.team === gameState.currentTeam && !gameState.gameOver) {
+            clueForm.style.display = 'flex';
+        } else {
+            clueForm.style.display = 'none';
         }
     }
     
@@ -280,8 +368,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function handleCardClick(cardIndex) {
-        // Envoyer l'événement de clic au serveur
-        socket.emit('cardClick', cardIndex);
+        // Vérifier si c'est au tour du joueur et s'il n'est pas un maître-espion
+        if (playerInfo.team === gameState.currentTeam && playerInfo.role !== 'spymaster' && !gameState.gameOver) {
+            if (gameState.currentClue && gameState.attemptsLeft > 0) {
+                // Envoyer l'événement de clic au serveur
+                socket.emit('cardClick', cardIndex);
+            } else {
+                alert("Attendez que votre Maître-Espion donne un indice!");
+            }
+        }
     }
     
     function showGameOverModal() {
@@ -298,11 +393,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Gestionnaires d'événements pour les boutons de jeu
     newGameBtn.addEventListener('click', () => {
-        socket.emit('newGame');
+        if (confirm('Êtes-vous sûr de vouloir démarrer une nouvelle partie?')) {
+            socket.emit('newGame');
+        }
     });
     
     endTurnBtn.addEventListener('click', () => {
-        socket.emit('endTurn');
+        if (confirm('Voulez-vous terminer votre tour?')) {
+            socket.emit('endTurn');
+        }
     });
     
     newGameAfterWinBtn.addEventListener('click', () => {
