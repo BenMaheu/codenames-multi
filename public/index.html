@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Names - Multijoueur</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Code Names</h1>
+        
+        <!-- Section de connexion -->
+        <div id="joinSection" class="join-section">
+            <h2>Rejoindre la partie</h2>
+            <div class="join-form">
+                <div class="form-group">
+                    <label for="nickname">Pseudo :</label>
+                    <input type="text" id="nickname" placeholder="Entrez votre pseudo">
+                </div>
+                
+                <div class="form-group">
+                    <label>Équipe :</label>
+                    <div class="team-selection">
+                        <button id="joinRedTeam" class="team-btn red">Équipe Rouge</button>
+                        <button id="joinBlueTeam" class="team-btn blue">Équipe Bleue</button>
+                        <button id="joinSpectator" class="team-btn neutral">Spectateur</button>
+                    </div>
+                </div>
+                
+                <div class="form-group" id="roleSelectionGroup" style="display: none;">
+                    <label>Rôle :</label>
+                    <div class="role-selection">
+                        <button id="joinAsSpymaster" class="role-btn spymaster">Maître-Espion</button>
+                        <button id="joinAsAgent" class="role-btn agent">Agent</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Informations sur l'équipe actuelle -->
+        <div id="teamInfo" class="team-info" style="display: none;">
+            <div class="current-role">
+                <span id="playerTeamDisplay"></span> | <span id="playerRoleDisplay"></span>
+                <button id="changeTeamBtn">Changer d'équipe</button>
+            </div>
+        </div>
+        
+        <!-- Contrôles du jeu -->
+        <div class="game-controls">
+            <button id="newGameBtn">Nouvelle Partie</button>
+            <div class="team-scores">
+                <div class="team red">
+                    <h2>Équipe Rouge</h2>
+                    <p>Cartes restantes: <span id="redCards">8</span></p>
+                    <div class="team-players" id="redTeamPlayers"></div>
+                </div>
+                <div class="team blue">
+                    <h2>Équipe Bleue</h2>
+                    <p>Cartes restantes: <span id="blueCards">8</span></p>
+                    <div class="team-players" id="blueTeamPlayers"></div>
+                </div>
+            </div>
+            <div class="turn-indicator">
+                <p>Tour: <span id="currentTeam">Rouge</span></p>
+            </div>
+            <button id="endTurnBtn">Fin du Tour</button>
+        </div>
+        
+        <!-- Plateau de jeu -->
+        <div class="game-board" id="gameBoard">
+            <!-- Les cartes seront générées dynamiquement ici -->
+        </div>
+        
+        <!-- Liste des spectateurs -->
+        <div class="spectators-section">
+            <h3>Spectateurs</h3>
+            <div id="spectatorsList" class="spectators-list"></div>
+        </div>
+        
+        <!-- Informations sur le jeu -->
+        <div class="game-info">
+            <h2>Règles du jeu</h2>
+            <p>Code Names est un jeu d'association de mots entre deux équipes.</p>
+            <ul>
+                <li>Deux équipes (Rouge et Bleue) s'affrontent.</li>
+                <li>Un "Maître-Espion" de chaque équipe donne des indices à ses coéquipiers.</li>
+                <li>Les coéquipiers doivent deviner quelles cartes appartiennent à leur équipe.</li>
+                <li>L'équipe qui découvre toutes ses cartes en premier gagne.</li>
+                <li>Attention à la carte noire qui fait perdre instantanément!</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Modal de fin de partie -->
+    <div id="gameOverModal" class="modal">
+        <div class="modal-content">
+            <h2>Partie Terminée!</h2>
+            <p id="winnerMessage"></p>
+            <button id="newGameAfterWinBtn">Nouvelle Partie</button>
+        </div>
+    </div>
+    
+    <!-- Socket.io et script client -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
